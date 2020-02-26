@@ -78,6 +78,9 @@ class RoutesController extends MainController {
             } else {
                 $returnResponse["status"] = 409;
                 $returnResponse["message"] = "Une route avec le même chemin existe déjà";
+                $returnResponse["datas"]["errors"] = [
+                    "path" => $returnResponse["message"]
+                ];
             }
 
         }
@@ -87,7 +90,6 @@ class RoutesController extends MainController {
             $returnResponse["status"],
             [],
             true);
-
         return $response;
     }
 
