@@ -160,7 +160,7 @@ class RoutesController extends MainController {
 
                 } else {
                     $returnResponse["status"] = 404;
-                    $returnResponse["message"] = "Aucune ressource envoye";
+                    $returnResponse["message"] = "Aucune ressource envoyée";
                 }
             } else {
                 $returnResponse["status"] = 404;
