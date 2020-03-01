@@ -8,6 +8,7 @@
 
 namespace App\Controller;
 
+use App\Entity\Method;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -57,11 +58,23 @@ class RoutesController extends MainController {
             $repoRoute = $this->getDoctrine()->getRepository(Route::class);
 
             // If a route with the same path already exists, doesn't create it
-            if (!($repoRoute->findBy(["path" => $objectToCreate["path"]]))) {
+//            if (!($repoRoute->findBy(["path" => $objectToCreate["path"]]))) {
+
+
                 $entityFound = new Route();
                 $entityFound
                     ->setName($objectToCreate["name"])
                     ->setPath($objectToCreate["path"]);
+
+                if (!empty($objectToCreate["method"])) {
+                    $repoMethod = $this->getDoctrine()->getRepository(Method::class);
+                    if (($methodFound = $repoMethod->find($objectToCreate["method"]))) {
+                        $entityFound->addMethod($methodFound);
+                    }
+
+                }
+
+
 
                 try {
                     $em->persist($entityFound);
@@ -75,14 +88,87 @@ class RoutesController extends MainController {
                     $returnResponse["additional_message"] = $ex->getMessage();
                 }
 
-            } else {
-                $returnResponse["status"] = 409;
-                $returnResponse["message"] = "Une route avec le même chemin existe déjà";
-                $returnResponse["datas"]["errors"] = [
-                    "path" => $returnResponse["message"]
-                ];
-            }
+//            } else {
+//                $returnResponse["status"] = 409;
+//                $returnResponse["message"] = "Une route avec le même chemin existe déjà";
+//                $returnResponse["datas"]["errors"] = [
+//                    "path" => $returnResponse["message"]
+//                ];
+//            }
 
+        }
+
+        $response = new JsonResponse(
+            $this->jms->serialize($returnResponse, "json"),
+            $returnResponse["status"],
+            [],
+            true);
+        return $response;
+    }
+
+    /**
+     * @Router("/routes/{id<\d+>}", name="routes_update", methods={"PUT"})
+     * @param Request $request
+     * @return Response
+     */
+    public function update(Request $request) {
+        $returnResponse = [
+            "status" => 500,
+            "message" => "Unknown error",
+            "additional_message" => "",
+            "datas" => []
+        ];
+        $em = $this->getDoctrine()->getManager();
+
+        $req = json_decode($request->getContent(), true);
+
+        $routeId = $request->attributes->get("id");
+        if (!empty($routeId)) {
+
+            $repoRoute = $this->getDoctrine()->getRepository(Route::class);
+            $repoMethod = $this->getDoctrine()->getRepository(Method::class);
+
+            $routeToUpdate = $repoRoute->find($routeId);
+
+            if (!empty($routeToUpdate)) {
+                if (!empty($req["object_to_update"])) {
+                    $objectToUpdate = $req["object_to_update"];
+
+                    $routeToUpdate
+                        ->setName($objectToUpdate["name"])
+                        ->setPath($objectToUpdate["path"]);
+                    if (!empty($objectToUpdate["method"])) {
+                        $method = $routeToUpdate->getMethod()->get(0);
+                        if (!empty($method) && $method->getId() != $objectToUpdate["method"]) {
+                            $routeToUpdate->removeMethod($method);
+                        }
+                        $routeToUpdate
+                            ->addMethod($repoMethod->find($objectToUpdate["method"]));
+                    }
+
+                    try {
+                        $em->persist($routeToUpdate);
+                        $em->flush();
+
+                        $returnResponse["status"] = 200;
+                        $returnResponse["message"] = "Route modifiée";
+                        $returnResponse["datas"]["object_updated"] = $routeToUpdate;
+
+                    } catch (\Exception $ex) {
+                        $returnResponse["additional_message"] = $ex->getMessage();
+                    }
+
+                } else {
+                    $returnResponse["status"] = 404;
+                    $returnResponse["message"] = "Aucune ressource envoye";
+                }
+            } else {
+                $returnResponse["status"] = 404;
+                $returnResponse["message"] = "Aucune ressource trouvée";
+            }
+        } else {
+            $returnResponse["status"] = 404;
+            $returnResponse["message"] = "Aucune ressource trouvée";
         }
 
         $response = new JsonResponse(
