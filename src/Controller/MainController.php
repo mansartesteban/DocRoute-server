@@ -16,9 +16,14 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 class MainController extends AbstractController {
 
     protected $jms = null;
+    protected $defaultHeaders = [];
 
     public function __construct() {
         $this->jms = SerializerBuilder::create()->build();
+        $this->defaultHeaders = [
+            "Content-Type" => "application/json",
+            "Access-Control-Allow-Origin" => "*"
+        ];
     }
 
 //    protected function ReutrnJsonResponse($datas = [], $status = 200, $headers = []) {
